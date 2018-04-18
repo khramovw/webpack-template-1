@@ -1,75 +1,117 @@
-const webpack = require('webpack');
 const path = require('path');
-const config = require('./gulp/config');
-const styleLoader = require('style-loader');
+const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+const devServer = require("webpack-dev-server");
 
-// function createConfig( options, env ){}
+// the path(s) that should be cleaned
+let pathsToClean = [
+    'build'
+];
 
-let webpackConfig,
-isProduction = true,
-env = 'production';
+module.exports = (env, argv) => {
+    let config = {
+        entry: `./src/index.js` ,
+        output: {
+            filename: 'bundle.js',
+            path: path.resolve(__dirname, './build'),
+        },
+        plugins: [
+            new CleanWebpackPlugin(pathsToClean),
+            new HtmlWebpackPlugin({
+                filename: 'index.html',
+                template: './src/index.html'
+            }),
+            new MiniCssExtractPlugin(
+                {
+                    filename: "style.css",
+                    chunkFilename: "[id].css"
+                }
+            ),
+            new webpack.ProvidePlugin({
+                jquery: 'jquery',
+                $: "jquery",
+                jQuery: "jquery"
+            })
 
-// if (env === undefined) env = process.env.NODE_ENV;
-
-// isProduction = env === 'production';
-isProduction = 'production';
-
-webpackConfig = {
-    context: path.resolve(__dirname, config.src.js),
-    entry: {
-  plugin: './plugin.js',
-},
-    output: {
-  path: path.resolve(__dirname, config.dest.js),
-  filename: '[name].js',
-  publicPath: 'js/',
-},
-    devtool: isProduction ? '#source-map' : '#cheap-module-eval-source-map',
-    resolve: {
-    extensions: ['.js'],
-    alias: {
-      TweenLite: path.resolve('node_modules', 'gsap/src/uncompressed/TweenLite.js'),
-      TweenMax: path.resolve('node_modules', 'gsap/src/uncompressed/TweenMax.js'),
-      TimelineLite: path.resolve('node_modules', 'gsap/src/uncompressed/TimelineLite.js'),
-      TimelineMax: path.resolve('node_modules', 'gsap/src/uncompressed/TimelineMax.js'),
-      ScrollMagic: path.resolve('node_modules', 'scrollmagic/scrollmagic/uncompressed/ScrollMagic.js'),
-      'animation.gsap': path.resolve('node_modules', 'scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap.js'),
-      'debug.addIndicators': path.resolve('node_modules', 'scrollmagic/scrollmagic/uncompressed/plugins/debug.addIndicators.js'),
-    },
-},
-    module: {
-        rules: [
-            {
-                test: /\.js$/,
-                loader: 'babel-loader',
-                exclude: [
-                    path.resolve(__dirname, 'node_modules')
-                ]
-            },
-            {
-                test: /\.scss$/,
-                use: [
-                    {
-                        loader: "style-loader" // creates style nodes from JS strings
-                    }, 
-                    {
-                        loader: "css-loader" // translates CSS into CommonJS
-                    }, 
-                    {
-                        loader: "sass-loader" // compiles Sass to CSS
-                    },
-                    { 
-                        loader: 'postcss-loader', 
-                        options: { parser: 'sugarss', exec: true } 
+        ],
+        module: {
+            rules: [
+                {
+                    test: /\.js$/,
+                    exclude: /(node_modules|bower_components)/,
+                    use: {
+                        loader: 'babel-loader',
                     }
-                ]
-            }
-        ]
+                },
+                {
+                    test: /\.less$/,
+                    use: [{
+                        loader: "style-loader" // creates style nodes from JS strings
+                    }, {
+                        loader: "css-loader" // translates CSS into CommonJS
+                    }, {
+                        loader: "less-loader" // compiles Less to CSS
+                    }]
+                }
+            ]
+        },
+        devServer: {
+            contentBase: path.join(__dirname, 'build'),
+            open: true,
+            compress: true,
+            port: 3000
+        }
+    };
+
+    if (argv.mode == 'production') {
+        config.plugins.push(new UglifyJsPlugin({ sourceMap: false }));
+        config.module.rules.push({
+            test: /\.less$/,
+            use: [MiniCssExtractPlugin.loader,
+                "css-loader",
+                "postcss-loader",
+                "less-loader"
+            ]
+        });
+        config.module.rules.push({
+            test: /\.(png|jpg|gif)$/,
+            use:
+                [{
+                    loader: 'file-loader',
+
+                },
+                    {
+                    loader: 'image-webpack-loader',
+                    options: {
+                        name: '[path][name].[ext]',
+                            bypassOnDebug: true,
+                    },
+                }]
+
+        });
+
+
+    } else if(argv.mode == 'development'){
+        config.devtool = "source-map";
+        config.module.rules.push({
+            test: /\.less$/,
+            use: [MiniCssExtractPlugin.loader,
+                "css-loader",
+                "less-loader"
+            ]
+        });
+        config.module.rules.push({
+            test: /\.(png|jpg|gif)$/,
+            use:
+                {
+                    loader: 'file-loader',
+                    options: {}
+                }
+
+        });
     }
-} 
-
-
-module.exports = webpackConfig;
-// module.exports.createConfig = createConfig;
-  
-    
+    return config
+}

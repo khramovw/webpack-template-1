@@ -1,8 +1,9 @@
 // var production = util.env.production || util.env.prod || false;
+
 var destPath = 'dist';
 
 var config = {
-    env       : 'development',
+    // env       : 'development',
     // production: production,
 
     src: {
@@ -10,7 +11,7 @@ var config = {
         templates    : 'src/templates',
         templatesData: 'src/templates/data',
         pagelist     : 'src/index.yaml',
-        sass         : 'src/sass',
+        scss         : 'src/scss',
         // path for sass files that will be generated automatically via some of tasks
         sassGen      : 'src/sass/generated',
         js           : 'src/js',
